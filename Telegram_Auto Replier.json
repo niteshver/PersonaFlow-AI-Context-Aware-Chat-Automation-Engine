@@ -1,0 +1,230 @@
+{
+  "name": "Whatsapp_Chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b8141108-9608-4091-bde1-aebc87691d78",
+      "name": "Telegram Trigger",
+      "webhookId": "4a2044b9-2745-4f9f-91a1-3aaf33c7af63",
+      "credentials": {
+        "telegramApi": {
+          "id": "myjhWTrZIxBH4KCI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "user_input",
+              "value": "={{ $(\"Telegram Trigger\").item.json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "context",
+              "value": "={{ $('Extract JSON').item.json.chatData }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "24b9f193-f8e0-452d-892b-2074f77d88bb",
+      "name": "Prepare Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are me.\n\nYour job is to reply exactly like I would in real life chats.\n\nBelow are examples of my past conversations:\n{{ $json.context }}\n\n-------------------------------------\n\nGuidelines:\n\n1. Tone:\n- Be casual, not formal\n- Use Hinglish if appropriate\n- Sound natural, like chatting with a friend\n\n2. Style:\n- Keep replies short (1–2 lines usually)\n- Avoid long explanations unless needed\n- Use slang if it fits the context\n\n3. Personality:\n- Friendly, slightly informal\n- Not robotic\n- Sometimes dry or funny depending on context\n\n4. Behavior:\n- Do NOT sound like an AI\n- Do NOT explain things unless asked\n- Do NOT be overly polite or formal\n- Avoid generic replies like \"How can I help you?\"\n\n5. Context usage:\n- Learn from the examples\n- Match tone, structure, and vibe\n- If similar situation appears, mimic past response style\n\n-------------------------------------\n\nNow reply to this message:\n\n{{ $json.user_input }}\n\n-------------------------------------\n\nOutput ONLY the reply text.",
+        "options": {
+          "systemMessage": "You are a personal chat assistant that mimics the user's exact communication style based on provided examples."
+        }
+      },
+      "id": "428053fd-1040-42d0-a8a8-73fefa2845c6",
+      "name": "Personality Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Telegram Trigger\").item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "ec854d43-822d-46f3-a5f0-e5186451c488",
+      "name": "Send Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1248,
+        0
+      ],
+      "webhookId": "cd41c17f-6124-43f3-a38e-b7c908ca3dec",
+      "credentials": {
+        "telegramApi": {
+          "id": "myjhWTrZIxBH4KCI",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fileSelector": "/Users/niteshv1520/Desktop/output_data.json",
+        "options": {}
+      },
+      "id": "9226bc3c-6087-4cca-8d44-2c67a2c10fd6",
+      "name": "Read Chat File",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "destinationKey": "chatData",
+        "options": {}
+      },
+      "id": "b67a4826-36ad-4a80-92d1-f8e87d892ad2",
+      "name": "Extract JSON",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.9
+        }
+      },
+      "id": "a5486418-4c39-4f6b-81af-844faeb0658e",
+      "name": "Gemini Flash Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        976,
+        224
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ax2ssJMTXpug9bkf",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Chat File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Context": {
+      "main": [
+        [
+          {
+            "node": "Personality Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Personality Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Chat File": {
+      "main": [
+        [
+          {
+            "node": "Extract JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract JSON": {
+      "main": [
+        [
+          {
+            "node": "Prepare Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Flash Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Personality Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2e012690-6246-4283-b5e7-69294ad17d12",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "248ed54c5a3890eaf8c51f96c75cb45b5340554c6b1ac609d8e94a581484e0d4"
+  },
+  "id": "4tQQJVdAsv8rYrJj",
+  "tags": []
+}
